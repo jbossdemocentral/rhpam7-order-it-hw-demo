@@ -1,6 +1,22 @@
-Red Hat Process Automation Manager Mortgage Demo
+Red Hat Process Automation Manager Demo Template
 =============================
-The example project mortgage demo that is delivered with the Red Hat Process Automation Manager 7.
+Template from which we build Red Hat Process Automation Manager 7 demos.
+
+To create a new demo, the user needs to:
+- Create a new project using this repo as a base.
+- Configure the properties files to configure the name of the demo, the location of the demo's Git repo, etc.
+* init-properties.sh
+* init-properties.ps1
+* support/openshift/provision-properties-static.sh
+* support/openshift/provision-properties-static.ps1
+* support/openshift/provision-properties-dynamic.sh
+* support/openshift/provision-properties-dynamic.ps1
+- Fix this README.md file to document the demo.
+
+Template
+--------
+The documentation template starts below!
+
 
 There are three options available to you for using this demo; local, Docker and OpenShift.
 
