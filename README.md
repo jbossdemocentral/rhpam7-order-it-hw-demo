@@ -5,18 +5,18 @@ Template from which we build Red Hat Process Automation Manager 7 demos.
 To create a new demo, the user needs to:
 - Create a new project using this repo as a base.
 - Configure the properties files to configure the name of the demo, the location of the demo's Git repo, etc.
-* init-properties.sh
-* init-properties.ps1
-* support/openshift/provision-properties-static.sh
-* support/openshift/provision-properties-static.ps1
-* support/openshift/provision-properties-dynamic.sh
-* support/openshift/provision-properties-dynamic.ps1
-- Fix this README.md file to document the demo.
+  - `init-properties.sh`
+  - `init-properties.ps1`
+  - `support/openshift/provision-properties-static.sh`
+  - `support/openshift/provision-properties-static.ps1`
+  - `support/openshift/provision-properties-dynamic.sh`
+  - `support/openshift/provision-properties-dynamic.ps1`
+- Fix this `README.md` file to document the demo.
+- Add the demo's ".niogit" repository content (containing the system.git and spaces) to the directory `support/rhpam7-demo-niogit`.
 
 Template
 --------
-The documentation template starts below!
-
+**The documentation template starts below this line!!!!**
 
 There are three options available to you for using this demo; local, Docker and OpenShift.
 
