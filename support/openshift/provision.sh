@@ -157,9 +157,6 @@ OPENSHIFT_USER=${ARG_USERNAME:-$LOGGEDIN_USER}
 # Demo specific properties.
 . $SCRIPT_DIR/provision-properties-dynamic.sh
 
-# Project name needs to be unique across OpenShift Online
-
-
 # KIE Parameters
 KIE_ADMIN_USER=pamAdmin
 KIE_ADMIN_PWD=redhatpam1!
@@ -167,11 +164,6 @@ KIE_SERVER_CONTROLLER_USER=kieserver
 KIE_SERVER_CONTROLLER_PWD=kieserver1!
 KIE_SERVER_USER=kieserver
 KIE_SERVER_PWD=kieserver1!
-
-#OpenShift Template Parameters
-#GitHub tag referencing the image streams and templates.
-OPENSHIFT_PAM7_TEMPLATES_TAG=7.0.2.GA
-
 
 ################################################################################
 # DEMO MATRIX                                                                  #
@@ -284,7 +276,7 @@ function create_application() {
     IMAGE_STREAM_NAMESPACE=${PRJ[0]}
   fi
 
-  oc process -f $SCRIPT_DIR/rhpam70-businesscentral-openshift-with-users.yaml -p DOCKERFILE_REPOSITORY="https://github.com/jbossdemocentral/rhpam7-order-it-hw-demo" -p DOCKERFILE_REF="master" -p DOCKERFILE_CONTEXT="support/openshift/rhpam70-kieserver-cors" -n ${PRJ[0]} | oc create -n ${PRJ[0]} -f -
+  oc process -f $SCRIPT_DIR/rhpam70-businesscentral-openshift-with-users.yaml -p DOCKERFILE_REPOSITORY="https://github.com/jbossdemocentral/rhpam7-order-it-hw-demo" -p DOCKERFILE_REF="master" -p DOCKERFILE_CONTEXT="support/openshift/rhpam7-businesscentral-openshift-with-users" -n ${PRJ[0]} | oc create -n ${PRJ[0]} -f -
 
   oc create configmap setup-demo-scripts --from-file=$SCRIPT_DIR/bc-clone-git-repository.sh,$SCRIPT_DIR/provision-properties-static.sh
 
@@ -312,33 +304,33 @@ function create_application() {
 
   oc patch dc/$ARG_DEMO-rhpamcentr --type='json' -p "[{'op': 'replace', 'path': '/spec/triggers/0/imageChangeParams/from/name', 'value': 'rhpam70-businesscentral-openshift-with-users:latest'}]"
 
-  oc new-app java:8~https://github.com/DuncanDoyle/order-it-hw-app \
+  oc new-app java:8~https://github.com/jbossdemocentral/rhpam7-order-it-hw-demo-springboot-app \
               -e JAVA_OPTIONS="-Dorg.kie.server.repo=/data -Dorg.jbpm.document.storage=/data/docs -Dorder.service.location=http://order-mgmt-app:8080 -Dorg.kie.server.controller.user=controllerUser -Dorg.kie.server.controller.pwd=test1234! -Dspring.profiles.active=openshift-rhpam" \
               -e KIE_MAVEN_REPO_USER=mavenUser \
               -e KIE_MAVEN_REPO_PASSWORD=test1234! \
               -e KIE_MAVEN_REPO=http://$ARG_DEMO-rhpamcentr:8080/maven2 \
               -e GC_MAX_METASPACE_SIZE=192
 
-  oc create configmap order-it-hw-app-config-map --from-file=$SCRIPT_DIR/settings.xml -n ${PRJ[0]}
+  oc create configmap rhpam7-order-it-hw-demo-springboot-app-settings-config-map --from-file=$SCRIPT_DIR/settings.xml -n ${PRJ[0]}
 
-  oc volume dc/order-it-hw-app --add -m /home/jboss/.m2 -t configmap --configmap-name=order-it-hw-app-config-map -n ${PRJ[0]}
+  oc volume dc/rhpam7-order-it-hw-demo-springboot-app --add -m /home/jboss/.m2 -t configmap --configmap-name=rhpam7-order-it-hw-demo-springboot-app-settings-config-map -n ${PRJ[0]}
 
-  oc volume dc/order-it-hw-app --add --claim-size 100Mi --mount-path /data --name order-it-hw-app-data -n ${PRJ[0]}
+  oc volume dc/rhpam7-order-it-hw-demo-springboot-app --add --claim-size 100Mi --mount-path /data --name order-it-hw-app-data -n ${PRJ[0]}
 
-  oc expose service order-it-hw-app -n ${PRJ[0]}
+  oc expose service rhpam7-order-it-hw-demo-springboot-app -n ${PRJ[0]}
 
   ORDER_IT_HW_APP_ROUTE=$(oc get route order-it-hw-app | awk 'FNR > 1 {print $2}')
   sed s/.*kieserver\.location.*/kieserver\.location=$ORDER_IT_HW_APP_ROUTE/g $SCRIPT_DIR/application-openshift-rhpam.properties.orig > $SCRIPT_DIR/application-openshift-rhpam.properties
 
-  oc create configmap order-it-hw-app-springboot-config-map --from-file=$SCRIPT_DIR/application-openshift-rhpam.properties -n ${PRJ[0]}
+  oc create configmap rhpam7-order-it-hw-demo-springboot-app-properties-config-map --from-file=$SCRIPT_DIR/application-openshift-rhpam.properties -n ${PRJ[0]}
 
-  oc volume dc/order-it-hw-app --add -m /deployments/config -t configmap --configmap-name=order-it-hw-app-springboot-config-map -n ${PRJ[0]}
+  oc volume dc/rhpam7-order-it-hw-demo-springboot-app --add -m /deployments/config -t configmap --configmap-name=rhpam7-order-it-hw-demo-springboot-app-properties-config-map -n ${PRJ[0]}
 
-  oc new-app java:8~https://github.com/DuncanDoyle/order-mgmt-app \
+  oc new-app java:8~https://github.com/jbossdemocentral/rhpam7-order-it-hw-demo-vertx-app \
             -e JAVA_OPTIONS='-Duser=maciek -Dpassword=maciek1!' \
             -e JAVA_APP_JAR=order-mgmt-app-1.0.0-fat.jar
 
-  oc expose service order-mgmt-app -n ${PRJ[0]}
+  oc expose service rhpam7-order-it-hw-demo-vertx-app -n ${PRJ[0]}
 
 }
 
