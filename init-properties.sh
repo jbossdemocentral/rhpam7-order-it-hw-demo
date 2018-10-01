@@ -1,6 +1,6 @@
-DEMO="Demo Template"
+DEMO="Red Hat PAM 7 - Order IT Hardware Demo"
 AUTHORS="Red Hat"
-PROJECT="git@github.com:jbossdemocentral/rhpam7-demo-template.git"
+PROJECT="git@github.com:jbossdemocentral/rhpam7-order-it-hw-demo.git"
 PRODUCT="Red Hat Process Automation Manager"
 TARGET=./target
 JBOSS_HOME=$TARGET/jboss-eap-7.1
@@ -15,6 +15,6 @@ PAM_KIE_SERVER=rhpam-$PAM_VERSION-kie-server-ee7.zip
 EAP=jboss-eap-7.1.0.zip
 #EAP_PATCH=jboss-eap-6.4.7-patch.zip
 VERSION=7.0
-PROJECT_GIT_REPO=https://github.com/jbossdemocentral/rhpam7-mortgage-demo-repo
-PROJECT_GIT_REPO_NAME=examples-rhpam7-mortgage-demo-repo.git
+PROJECT_GIT_REPO=https://github.com/jbossdemocentral/rhpam7-order-it-hw-demo-repo
+PROJECT_GIT_REPO_NAME=examples-rhpam7-order-it-hw-demo-repo.git
 NIOGIT_PROJECT_GIT_REPO="MySpace/$PROJECT_GIT_REPO_NAME"

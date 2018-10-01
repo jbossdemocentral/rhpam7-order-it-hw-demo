@@ -170,7 +170,7 @@ KIE_SERVER_PWD=kieserver1!
 
 #OpenShift Template Parameters
 #GitHub tag referencing the image streams and templates.
-OPENSHIFT_PAM7_TEMPLATES_TAG=rhpam70
+OPENSHIFT_PAM7_TEMPLATES_TAG=7.0.2.GA
 
 
 ################################################################################
@@ -250,6 +250,7 @@ function create_projects() {
 function import_imagestreams_and_templates() {
   echo_header "Importing Image Streams"
   oc create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/$OPENSHIFT_PAM7_TEMPLATES_TAG/rhpam70-image-streams.yaml
+  oc create -f https://raw.githubusercontent.com/jboss-openshift/application-templates/ose-v1.4.15/openjdk/openjdk18-image-stream.json
 
   echo_header "Importing Templates"
   oc create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/$OPENSHIFT_PAM7_TEMPLATES_TAG/templates/rhpam70-authoring.yaml
@@ -283,7 +284,9 @@ function create_application() {
     IMAGE_STREAM_NAMESPACE=${PRJ[0]}
   fi
 
-  oc create configmap setup-demo-scripts --from-file=$SCRIPT_DIR/bc-clone-git-repository.sh
+  oc process -f $SCRIPT_DIR/rhpam70-businesscentral-openshift-with-users.yaml -p DOCKERFILE_REPOSITORY="https://github.com/jbossdemocentral/rhpam7-order-it-hw-demo" -p DOCKERFILE_REF="master" -p DOCKERFILE_CONTEXT="support/openshift/rhpam70-kieserver-cors" -n ${PRJ[0]} | oc create -n ${PRJ[0]} -f -
+
+  oc create configmap setup-demo-scripts --from-file=$SCRIPT_DIR/bc-clone-git-repository.sh,$SCRIPT_DIR/provision-properties-static.sh
 
   oc new-app --template=rhpam70-authoring \
   -p APPLICATION_NAME="$ARG_DEMO" \
@@ -295,6 +298,8 @@ function create_application() {
   -p KIE_SERVER_CONTROLLER_PWD="$KIE_SERVER_CONTROLLER_PWD" \
   -p KIE_SERVER_USER="$KIE_SERVER_USER" \
   -p KIE_SERVER_PWD="$KIE_SERVER_PWD" \
+  -p BUSINESS_CENTRAL_MAVEN_USERNAME="mavenUser" \
+  -p BUSINESS_CENTRAL_MAVEN_PASSWORD="test1234!" \
   -p BUSINESS_CENTRAL_HTTPS_SECRET="businesscentral-app-secret" \
   -p KIE_SERVER_HTTPS_SECRET="kieserver-app-secret" \
   -p BUSINESS_CENTRAL_MEMORY_LIMIT="2Gi"
@@ -302,8 +307,38 @@ function create_application() {
   # Give the system some time to create the DC, etc. before we trigger a deployment config change.
   sleep 5
 
-  oc set volume dc/$ARG_DEMO-rhpamcentr --add --name=config-volume --configmap-name=setup-demo-scripts --mount-path=/tmp/config-files
-  oc set deployment-hook dc/$ARG_DEMO-rhpamcentr --post -c $ARG_DEMO-rhpamcentr -e BC_URL="http://$ARG_DEMO-rhpamcent" -v config-volume --failure-policy=abort -- /bin/bash /tmp/config-files/bc-clone-git-repository.sh
+  oc volume dc/$ARG_DEMO-rhpamcentr --add --name=config-volume --configmap-name=setup-demo-scripts --mount-path=/tmp/config-files
+  oc set deployment-hook dc/$ARG_DEMO-rhpamcentr --post -c $ARG_DEMO-rhpamcentr -e BC_URL="http://$ARG_DEMO-rhpamcent" --volumes config-volume --failure-policy=abort -- /bin/bash /tmp/config-files/bc-clone-git-repository.sh
+
+  oc patch dc/$ARG_DEMO-rhpamcentr --type='json' -p "[{'op': 'replace', 'path': '/spec/triggers/0/imageChangeParams/from/name', 'value': 'rhpam70-businesscentral-openshift-with-users:latest'}]"
+
+  oc new-app java:8~https://github.com/DuncanDoyle/order-it-hw-app \
+              -e JAVA_OPTIONS="-Dorg.kie.server.repo=/data -Dorg.jbpm.document.storage=/data/docs -Dorder.service.location=http://order-mgmt-app:8080 -Dorg.kie.server.controller.user=controllerUser -Dorg.kie.server.controller.pwd=test1234! -Dspring.profiles.active=openshift-rhpam" \
+              -e KIE_MAVEN_REPO_USER=mavenUser \
+              -e KIE_MAVEN_REPO_PASSWORD=test1234! \
+              -e KIE_MAVEN_REPO=http://$ARG_DEMO-rhpamcentr:8080/maven2 \
+              -e GC_MAX_METASPACE_SIZE=192
+
+  oc create configmap order-it-hw-app-config-map --from-file=$SCRIPT_DIR/settings.xml -n ${PRJ[0]}
+
+  oc volume dc/order-it-hw-app --add -m /home/jboss/.m2 -t configmap --configmap-name=order-it-hw-app-config-map -n ${PRJ[0]}
+
+  oc volume dc/order-it-hw-app --add --claim-size 100Mi --mount-path /data --name order-it-hw-app-data -n ${PRJ[0]}
+
+  oc expose service order-it-hw-app -n ${PRJ[0]}
+
+  ORDER_IT_HW_APP_ROUTE=$(oc get route order-it-hw-app | awk 'FNR > 1 {print $2}')
+  sed s/.*kieserver\.location.*/kieserver\.location=$ORDER_IT_HW_APP_ROUTE/g $SCRIPT_DIR/application-openshift-rhpam.properties.orig > $SCRIPT_DIR/application-openshift-rhpam.properties
+
+  oc create configmap order-it-hw-app-springboot-config-map --from-file=$SCRIPT_DIR/application-openshift-rhpam.properties -n ${PRJ[0]}
+
+  oc volume dc/order-it-hw-app --add -m /deployments/config -t configmap --configmap-name=order-it-hw-app-springboot-config-map -n ${PRJ[0]}
+
+  oc new-app java:8~https://github.com/DuncanDoyle/order-mgmt-app \
+            -e JAVA_OPTIONS='-Duser=maciek -Dpassword=maciek1!' \
+            -e JAVA_APP_JAR=order-mgmt-app-1.0.0-fat.jar
+
+  oc expose service order-mgmt-app -n ${PRJ[0]}
 
 }
 

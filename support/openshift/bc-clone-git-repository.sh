@@ -1,6 +1,9 @@
 #!/bin/sh
 
-. provision-properties-static.sh
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+. $SCRIPT_DIR/provision-properties-static.sh
+
 STARTUP_WAIT=60
 
 #First check if the PAM 7 Business Central REST API is available. We'll wait for 60 seconds
