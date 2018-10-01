@@ -14,7 +14,7 @@ Function Write-Host-Header($echo) {
   Write-Output "########################################################################"
 }
 
-$PRJ_DEMO="rhpam7-order-it-hw-demo"
+$PRJ_DEMO="rhpam7-oih"
 $PRJ_DEMO_NAME=((./support/openshift/provision.ps1 info $PRJ_DEMO 2>&1 | Select-String -Pattern "Project name") -split "\s+")[2]
 
 # Check if the project exists
@@ -28,7 +28,7 @@ if ($PRJ_EXISTS) {
 
   # Wait until the project has been removed.
   Write-Output "Waiting for OpenShift to clean deleted project."
-  Start-Sleep -s 20
+  Start-Sleep -s 30
 }
 
 Write-Output "Provisioning $PRODUCT $DEMO."

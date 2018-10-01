@@ -104,8 +104,8 @@ if (-not ([string]::IsNullOrEmpty($ARG_USERNAME)))
 . $SCRIPT_DIR\provision-properties-dynamic.ps1
 
 # KIE Parameters
-$KIE_ADMIN_USER="pamAdmin"
-$KIE_ADMIN_PWD="redhatpam1!"
+$KIE_ADMIN_USER="adminUser"
+$KIE_ADMIN_PWD="test1234!"
 $KIE_SERVER_CONTROLLER_USER="kieserver"
 $KIE_SERVER_CONTROLLER_PWD="kieserver1!"
 $KIE_SERVER_USER="kieserver"

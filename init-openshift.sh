@@ -14,7 +14,7 @@ function echo_header() {
   echo "########################################################################"
 }
 
-PRJ_DEMO="rhpam7-order-it-hw-demo"
+PRJ_DEMO="rhpam7-oih"
 PRJ_DEMO_NAME=$(./support/openshift/provision.sh info $PRJ_DEMO | awk '/Project name/{print $3}')
 
 # Check if the project exists
@@ -26,7 +26,7 @@ if [ $PRJ_EXISTS -eq 0 ]; then
    ./support/openshift/provision.sh delete $PRJ_DEMO
    # Wait until the project has been removed
    echo_header "Waiting for OpenShift to clean deleted project."
-   sleep 20
+   sleep 30
 else if [ ! $PRJ_EXISTS -eq 1 ]; then
 	echo "An error occurred communicating with your OpenShift instance."
 	echo "Please make sure that your logged in to your OpenShift instance with your 'oc' client."

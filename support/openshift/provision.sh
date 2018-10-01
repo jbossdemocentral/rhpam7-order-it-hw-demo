@@ -158,12 +158,12 @@ OPENSHIFT_USER=${ARG_USERNAME:-$LOGGEDIN_USER}
 . $SCRIPT_DIR/provision-properties-dynamic.sh
 
 # KIE Parameters
-KIE_ADMIN_USER=pamAdmin
-KIE_ADMIN_PWD=redhatpam1!
-KIE_SERVER_CONTROLLER_USER=kieserver
-KIE_SERVER_CONTROLLER_PWD=kieserver1!
-KIE_SERVER_USER=kieserver
-KIE_SERVER_PWD=kieserver1!
+KIE_ADMIN_USER=adminUser
+KIE_ADMIN_PWD=test1234!
+KIE_SERVER_CONTROLLER_USER=controllerUser
+KIE_SERVER_CONTROLLER_PWD=test1234!
+KIE_SERVER_USER=executionUser
+KIE_SERVER_PWD=test1234!
 
 ################################################################################
 # DEMO MATRIX                                                                  #
@@ -305,32 +305,34 @@ function create_application() {
   oc patch dc/$ARG_DEMO-rhpamcentr --type='json' -p "[{'op': 'replace', 'path': '/spec/triggers/0/imageChangeParams/from/name', 'value': 'rhpam70-businesscentral-openshift-with-users:latest'}]"
 
   oc new-app java:8~https://github.com/jbossdemocentral/rhpam7-order-it-hw-demo-springboot-app \
-              -e JAVA_OPTIONS="-Dorg.kie.server.repo=/data -Dorg.jbpm.document.storage=/data/docs -Dorder.service.location=http://order-mgmt-app:8080 -Dorg.kie.server.controller.user=controllerUser -Dorg.kie.server.controller.pwd=test1234! -Dspring.profiles.active=openshift-rhpam" \
+              --name rhpam7-oih-order-app \
+              -e JAVA_OPTIONS="-Dorg.kie.server.repo=/data -Dorg.jbpm.document.storage=/data/docs -Dorder.service.location=http://rhpam7-oih-order-mgmt-app:8080 -Dorg.kie.server.controller.user=controllerUser -Dorg.kie.server.controller.pwd=test1234! -Dspring.profiles.active=openshift-rhpam" \
               -e KIE_MAVEN_REPO_USER=mavenUser \
               -e KIE_MAVEN_REPO_PASSWORD=test1234! \
               -e KIE_MAVEN_REPO=http://$ARG_DEMO-rhpamcentr:8080/maven2 \
               -e GC_MAX_METASPACE_SIZE=192
 
-  oc create configmap rhpam7-order-it-hw-demo-springboot-app-settings-config-map --from-file=$SCRIPT_DIR/settings.xml -n ${PRJ[0]}
+  oc create configmap rhpam7-oih-order-app-settings-config-map --from-file=$SCRIPT_DIR/settings.xml -n ${PRJ[0]}
 
-  oc volume dc/rhpam7-order-it-hw-demo-springboot-app --add -m /home/jboss/.m2 -t configmap --configmap-name=rhpam7-order-it-hw-demo-springboot-app-settings-config-map -n ${PRJ[0]}
+  oc volume dc/rhpam7-oih-order-app --add -m /home/jboss/.m2 -t configmap --configmap-name=rhpam7-oih-order-app-settings-config-map -n ${PRJ[0]}
 
-  oc volume dc/rhpam7-order-it-hw-demo-springboot-app --add --claim-size 100Mi --mount-path /data --name order-it-hw-app-data -n ${PRJ[0]}
+  oc volume dc/rhpam7-oih-order-app --add --claim-size 100Mi --mount-path /data --name rhpam7-oih-order-app-data -n ${PRJ[0]}
 
-  oc expose service rhpam7-order-it-hw-demo-springboot-app -n ${PRJ[0]}
+  oc expose service rhpam7-oih-order-app -n ${PRJ[0]}
 
-  ORDER_IT_HW_APP_ROUTE=$(oc get route order-it-hw-app | awk 'FNR > 1 {print $2}')
-  sed s/.*kieserver\.location.*/kieserver\.location=$ORDER_IT_HW_APP_ROUTE/g $SCRIPT_DIR/application-openshift-rhpam.properties.orig > $SCRIPT_DIR/application-openshift-rhpam.properties
+  ORDER_IT_HW_APP_ROUTE=$(oc get route rhpam7-oih-order-app | awk 'FNR > 1 {print $2}')
+  sed s/.*kieserver\.location.*/kieserver\.location=http:\\/\\/$ORDER_IT_HW_APP_ROUTE\\/rest\\/server/g $SCRIPT_DIR/application-openshift-rhpam.properties.orig > $SCRIPT_DIR/application-openshift-rhpam.properties
 
-  oc create configmap rhpam7-order-it-hw-demo-springboot-app-properties-config-map --from-file=$SCRIPT_DIR/application-openshift-rhpam.properties -n ${PRJ[0]}
+  oc create configmap rhpam7-oih-order-app-properties-config-map --from-file=$SCRIPT_DIR/application-openshift-rhpam.properties -n ${PRJ[0]}
 
-  oc volume dc/rhpam7-order-it-hw-demo-springboot-app --add -m /deployments/config -t configmap --configmap-name=rhpam7-order-it-hw-demo-springboot-app-properties-config-map -n ${PRJ[0]}
+  oc volume dc/rhpam7-oih-order-app --add -m /deployments/config -t configmap --configmap-name=rhpam7-oih-order-app-properties-config-map -n ${PRJ[0]}
 
   oc new-app java:8~https://github.com/jbossdemocentral/rhpam7-order-it-hw-demo-vertx-app \
+            --name rhpam7-oih-order-mgmt-app \
             -e JAVA_OPTIONS='-Duser=maciek -Dpassword=maciek1!' \
             -e JAVA_APP_JAR=order-mgmt-app-1.0.0-fat.jar
 
-  oc expose service rhpam7-order-it-hw-demo-vertx-app -n ${PRJ[0]}
+  oc expose service rhpam7-oih-order-mgmt-app -n ${PRJ[0]}
 
 }
 
