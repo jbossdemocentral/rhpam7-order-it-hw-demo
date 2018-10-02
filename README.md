@@ -61,19 +61,19 @@ Notes
 -----
 The following functionality is covered:
 
-- Case Management: the IT Order process is implemented as a dynamic, data-driven case. Changes in data drive the execution of the case/process.
+- _Case Management_: the IT Order process is implemented as a dynamic, data-driven case. Changes in data drive the execution of the case/process.
 
-- Document Management: uploaded documents are stored via the PAM 7 Document Management Service
+- _Document Management_: uploaded documents are stored via the PAM 7 Document Management Service
 
-- Human/User Tasks: avarious user tasks need to be completed to complete the full order process. Integration between the User/Human Task Service and the front-end applications is done via REST
+- _Human/User Tasks_: various user tasks need to be completed to complete the full order process. Integration between the User/Human Task Service and the front-end applications is done via REST
 
-- API integration: the AngularJS UI integrates with the PAM Execution Engine through RESTful APIs.
+- _API integration_: the AngularJS UI integrates with the PAM Execution Engine through RESTful APIs.
 
-- SpringBoot: the PAM Execution Engine runs on a SpringBoot runtime. The runtime is connected to a PAM 7 Business Central environment for process management.
+- _SpringBoot_: the PAM Execution Engine runs on a SpringBoot runtime. The runtime is connected to a PAM 7 Business Central environment for process management.
 
-- Vert.x integration: the Order Service is implemented using Vert.x. Integration between the Vert.x application and the PAM Execution Engine is done via RESTful APIs
+- _Vert.x integration_: the Order Service is implemented using Vert.x. Integration between the Vert.x application and the PAM Execution Engine is done via RESTful APIs
 
-- Saga pattern: The order in the order service is cancelled via a BPMN2 compensation flow when the order time’s out. This effectively is the implementation of the Saga pattern in a BPMN2 process.
+- _Saga pattern_: The order in the order service is cancelled via a BPMN2 compensation flow when the order time’s out. This effectively is the implementation of the Saga pattern in a BPMN2 process.
 
 
 Supporting Articles
