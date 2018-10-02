@@ -106,15 +106,10 @@ if (-not ([string]::IsNullOrEmpty($ARG_USERNAME)))
 # KIE Parameters
 $KIE_ADMIN_USER="adminUser"
 $KIE_ADMIN_PWD="test1234!"
-$KIE_SERVER_CONTROLLER_USER="kieserver"
-$KIE_SERVER_CONTROLLER_PWD="kieserver1!"
-$KIE_SERVER_USER="kieserver"
-$KIE_SERVER_PWD="kieserver1!"
-
-#OpenShift Template Parameters
-#GitHub tag referencing the image streams and templates.
-$OPENSHIFT_PAM7_TEMPLATES_TAG="7.0.2.GA"
-
+$KIE_SERVER_CONTROLLER_USER="controllerUser"
+$KIE_SERVER_CONTROLLER_PWD="test1234!"
+$KIE_SERVER_USER="executionUser"
+$KIE_SERVER_PWD="test1234!"
 
 ################################################################################
 # DEMO MATRIX                                                                  #
@@ -220,6 +215,7 @@ Function Create-Projects() {
 Function Import-ImageStreams-And-Templates() {
   Write-Output-Header "Importing Image Streams"
   Call-Oc "create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/$OPENSHIFT_PAM7_TEMPLATES_TAG/rhpam70-image-streams.yaml" $True "Error importing Image Streams" $True
+  Call-Oc "create -f https://raw.githubusercontent.com/jboss-openshift/application-templates/ose-v1.4.15/openjdk/openjdk18-image-stream.json" $True "Error importing Image Streams" $True
 
   Write-Output-Header "Importing Templates"
   Call-Oc "create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/$OPENSHIFT_PAM7_TEMPLATES_TAG/templates/rhpam70-authoring.yaml" $True "Error importing Template" $True
@@ -252,6 +248,8 @@ Function Create-Application() {
     $IMAGE_STREAM_NAMESPACE=$($PRJ[0])
   }
 
+  oc process -f $SCRIPT_DIR/rhpam70-businesscentral-openshift-with-users.yaml -p DOCKERFILE_REPOSITORY="https://github.com/jbossdemocentral/rhpam7-order-it-hw-demo" -p DOCKERFILE_REF="master" -p DOCKERFILE_CONTEXT="support/openshift/rhpam7-businesscentral-openshift-with-users" -n $($PRJ[0]) | oc create -n $($PRJ[0]) -f -
+
   oc create configmap setup-demo-scripts --from-file=$SCRIPT_DIR/bc-clone-git-repository.sh,$SCRIPT_DIR/provision-properties-static.sh
 
   $argList = "new-app --template=rhpam70-authoring"`
@@ -264,6 +262,8 @@ Function Create-Application() {
       + " -p KIE_SERVER_CONTROLLER_PWD=""$KIE_SERVER_CONTROLLER_PWD""" `
       + " -p KIE_SERVER_USER=""$KIE_SERVER_USER""" `
       + " -p KIE_SERVER_PWD=""$KIE_SERVER_PWD""" `
+      + " -p BUSINESS_CENTRAL_MAVEN_USERNAME=""mavenUser""" `
+      + " -p BUSINESS_CENTRAL_MAVEN_PASSWORD=""test1234!""" `
       + " -p BUSINESS_CENTRAL_HTTPS_SECRET=""businesscentral-app-secret""" `
       + " -p KIE_SERVER_HTTPS_SECRET=""kieserver-app-secret""" `
       + " -p BUSINESS_CENTRAL_MEMORY_LIMIT=""2Gi"""
@@ -273,8 +273,46 @@ Function Create-Application() {
   # Give the system some time to create the DC, etc. before we trigger a deployment config change.
   Start-Sleep -s 5
 
-  oc set volume dc/$ARG_DEMO-rhpamcentr --add --name=config-volume --configmap-name=setup-demo-scripts  --mount-path=/tmp/config-files
+  oc volume dc/$ARG_DEMO-rhpamcentr --add --name=config-volume --configmap-name=setup-demo-scripts  --mount-path=/tmp/config-files
   oc set deployment-hook dc/$ARG_DEMO-rhpamcentr --post -c $ARG_DEMO-rhpamcentr -e BC_URL="http://$ARG_DEMO-rhpamcent" -v config-volume --failure-policy=abort -- /bin/bash /tmp/config-files/bc-clone-git-repository.sh
+
+  oc patch dc/$ARG_DEMO-rhpamcentr --type='json' -p "[{'op': 'replace', 'path': '/spec/triggers/0/imageChangeParams/from/name', 'value': 'rhpam70-businesscentral-openshift-with-users:latest'}]"
+
+  $argList = "new-app java:8~https://github.com/jbossdemocentral/rhpam7-order-it-hw-demo-springboot-app" `
+              + " --name rhpam7-oih-order-app" `
+              + " -e JAVA_OPTIONS=""-Dorg.kie.server.repo=/data -Dorg.jbpm.document.storage=/data/docs -Dorder.service.location=http://rhpam7-oih-order-mgmt-app:8080 -Dorg.kie.server.controller.user=controllerUser -Dorg.kie.server.controller.pwd=test1234! -Dspring.profiles.active=openshift-rhpam""" `
+              + " -e KIE_MAVEN_REPO_USER=mavenUser" `
+              + " -e KIE_MAVEN_REPO_PASSWORD=test1234!" `
+              + " -e KIE_MAVEN_REPO=http://$ARG_DEMO-rhpamcentr:8080/maven2" `
+              + " -e GC_MAX_METASPACE_SIZE=192"
+
+  Call-Oc $argList $True "Error creating application." $True
+
+  oc create configmap rhpam7-oih-order-app-settings-config-map --from-file=$SCRIPT_DIR/settings.xml -n $($PRJ[0])
+
+  oc volume dc/rhpam7-oih-order-app --add -m /home/jboss/.m2 -t configmap --configmap-name=rhpam7-oih-order-app-settings-config-map -n $($PRJ[0])
+
+  oc volume dc/rhpam7-oih-order-app --add --claim-size 100Mi --mount-path /data --name rhpam7-oih-order-app-data -n $($PRJ[0])
+
+  oc expose service rhpam7-oih-order-app -n $($PRJ[0])
+
+  $ORDER_IT_HW_APP_ROUTE=oc get route rhpam7-oih-order-app | select -index 1 | %{$_ -split "\s+"} | select -index 1
+
+  #sed s/.*kieserver\.location.*/kieserver\.location=http:\\/\\/$ORDER_IT_HW_APP_ROUTE\\/rest\\/server/g $SCRIPT_DIR/application-openshift-rhpam.properties.orig > $SCRIPT_DIR/application-openshift-rhpam.properties
+  cat $SCRIPT_DIR/application-openshift-rhpam.properties.orig | %{$_ -replace ".*kieserver.location=.*", "kieserver.location=http://$ORDER_IT_HW_APP_ROUTE/rest/server"} > $SCRIPT_DIR/application-openshift-rhpam.properties
+
+  oc create configmap rhpam7-oih-order-app-properties-config-map --from-file=$SCRIPT_DIR/application-openshift-rhpam.properties -n $($PRJ[0])
+
+  oc volume dc/rhpam7-oih-order-app --add -m /deployments/config -t configmap --configmap-name=rhpam7-oih-order-app-properties-config-map -n $($PRJ[0])
+
+  $argList="new-app java:8~https://github.com/jbossdemocentral/rhpam7-order-it-hw-demo-vertx-app" `
+            + " --name rhpam7-oih-order-mgmt-app" `
+            + " -e JAVA_OPTIONS=""-Duser=maciek -Dpassword=maciek1!""" `
+            + " -e JAVA_APP_JAR=order-mgmt-app-1.0.0-fat.jar"
+
+  Call-Oc $argList $True "Error creating application." $True
+
+  oc expose service rhpam7-oih-order-mgmt-app -n $($PRJ[0])
 }
 
 Function Build-And-Deploy() {
