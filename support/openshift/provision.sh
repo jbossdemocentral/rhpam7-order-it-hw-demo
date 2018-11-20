@@ -300,7 +300,7 @@ function create_application() {
   sleep 5
 
   oc set volume dc/$ARG_DEMO-rhpamcentr --add --name=config-volume --configmap-name=setup-demo-scripts --mount-path=/tmp/config-files
-  oc set deployment-hook dc/$ARG_DEMO-rhpamcentr --post -c $ARG_DEMO-rhpamcentr -e BC_URL="http://$ARG_DEMO-rhpamcent" --volumes config-volume --failure-policy=abort -- /bin/bash /tmp/config-files/bc-clone-git-repository.sh
+  oc set deployment-hook dc/$ARG_DEMO-rhpamcentr --post -c $ARG_DEMO-rhpamcentr -e BC_URL="http://$ARG_DEMO-rhpamcentr:8080" --volumes config-volume --failure-policy=abort -- /bin/bash /tmp/config-files/bc-clone-git-repository.sh
 
   oc patch dc/$ARG_DEMO-rhpamcentr --type='json' -p "[{'op': 'replace', 'path': '/spec/triggers/0/imageChangeParams/from/name', 'value': 'rhpam70-businesscentral-openshift-with-users:latest'}]"
 

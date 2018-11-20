@@ -4,8 +4,7 @@ PRJ_DESCRIPTION="Red Hat Process Automation Manager 7 Order IT Hardware Demo"
 #GitHub tag referencing the image streams and templates.
 OPENSHIFT_PAM7_TEMPLATES_TAG=7.0.2.GA
 
-#BUSINESS_CENTRAL_REST_URL="$BC_URL/rest"
-BUSINESS_CENTRAL_REST_URL="http://rhpam7-oih-rhpamcentr-rhpam7-oih-developer.192.168.64.24.nip.io/rest"
+BUSINESS_CENTRAL_REST_URL="$BC_URL/rest"
 
 SPACE="MySpace"
 DEFAULT_GROUPID="com.myspace"
