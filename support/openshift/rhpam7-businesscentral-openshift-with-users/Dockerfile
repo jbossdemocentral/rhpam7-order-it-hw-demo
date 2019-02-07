@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/rhpam-7/rhpam70-businesscentral-openshift:1.2
+FROM registry.access.redhat.com/rhpam-7/rhpam72-businesscentral-openshift:1.0
 
 ADD ./contrib/application-users.properties /opt/eap/standalone/configuration/application-users.properties
 ADD ./contrib/application-roles.properties /opt/eap/standalone/configuration/application-roles.properties
