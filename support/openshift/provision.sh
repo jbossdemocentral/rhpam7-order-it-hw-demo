@@ -241,15 +241,15 @@ function create_projects() {
 
 function import_imagestreams_and_templates() {
   echo_header "Importing Image Streams"
-  oc create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/$OPENSHIFT_PAM7_TEMPLATES_TAG/rhpam72-image-streams.yaml
+  oc create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/$OPENSHIFT_PAM7_TEMPLATES_TAG/rhpam73-image-streams.yaml
   oc create -f https://raw.githubusercontent.com/jboss-openshift/application-templates/ose-v1.4.15/openjdk/openjdk18-image-stream.json
 
   echo_header "Patching the ImageStreams"
-  oc patch is/rhpam72-businesscentral-openshift --type='json' -p '[{"op": "replace", "path": "/spec/tags/0/from/name", "value": "registry.access.redhat.com/rhpam-7/rhpam72-businesscentral-openshift:1.0"}]'
-  oc patch is/rhpam72-kieserver-openshift --type='json' -p '[{"op": "replace", "path": "/spec/tags/0/from/name", "value": "registry.access.redhat.com/rhpam-7/rhpam72-kieserver-openshift:1.0"}]'
+  oc patch is/rhpam73-businesscentral-openshift --type='json' -p '[{"op": "replace", "path": "/spec/tags/0/from/name", "value": "registry.access.redhat.com/rhpam-7/rhpam73-businesscentral-openshift:1.0"}]'
+  oc patch is/rhpam73-kieserver-openshift --type='json' -p '[{"op": "replace", "path": "/spec/tags/0/from/name", "value": "registry.access.redhat.com/rhpam-7/rhpam73-kieserver-openshift:1.0"}]'
 
   echo_header "Importing Templates"
-  oc create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/$OPENSHIFT_PAM7_TEMPLATES_TAG/templates/rhpam72-authoring.yaml
+  oc create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/$OPENSHIFT_PAM7_TEMPLATES_TAG/templates/rhpam73-authoring.yaml
 }
 
 
@@ -273,11 +273,11 @@ function create_application() {
     IMAGE_STREAM_NAMESPACE=${PRJ[0]}
   fi
 
-  oc process -f $SCRIPT_DIR/rhpam72-businesscentral-openshift-with-users.yaml -p DOCKERFILE_REPOSITORY="https://github.com/jbossdemocentral/rhpam7-order-it-hw-demo" -p DOCKERFILE_REF="master" -p DOCKERFILE_CONTEXT="support/openshift/rhpam7-businesscentral-openshift-with-users" -n ${PRJ[0]} | oc create -n ${PRJ[0]} -f -
+  oc process -f $SCRIPT_DIR/rhpam73-businesscentral-openshift-with-users.yaml -p DOCKERFILE_REPOSITORY="https://github.com/jbossdemocentral/rhpam7-order-it-hw-demo" -p DOCKERFILE_REF="pam73-upgrade" -p DOCKERFILE_CONTEXT="support/openshift/rhpam7-businesscentral-openshift-with-users" -n ${PRJ[0]} | oc create -n ${PRJ[0]} -f -
 
   oc create configmap setup-demo-scripts --from-file=$SCRIPT_DIR/bc-clone-git-repository.sh,$SCRIPT_DIR/provision-properties-static.sh
 
-  oc new-app --template=rhpam72-authoring \
+  oc new-app --template=rhpam73-authoring \
   -p APPLICATION_NAME="$ARG_DEMO" \
   -p IMAGE_STREAM_NAMESPACE="$IMAGE_STREAM_NAMESPACE" \
   -p IMAGE_STREAM_TAG="1.0" \
@@ -299,7 +299,7 @@ function create_application() {
   oc set volume dc/$ARG_DEMO-rhpamcentr --add --name=config-volume --configmap-name=setup-demo-scripts --mount-path=/tmp/config-files
   oc set deployment-hook dc/$ARG_DEMO-rhpamcentr --post -c $ARG_DEMO-rhpamcentr -e BC_URL="http://$ARG_DEMO-rhpamcentr:8080" --volumes config-volume --failure-policy=abort -- /bin/bash /tmp/config-files/bc-clone-git-repository.sh
 
-  oc patch dc/$ARG_DEMO-rhpamcentr --type='json' -p "[{'op': 'replace', 'path': '/spec/triggers/0/imageChangeParams/from/name', 'value': 'rhpam72-businesscentral-openshift-with-users:latest'}]"
+  oc patch dc/$ARG_DEMO-rhpamcentr --type='json' -p "[{'op': 'replace', 'path': '/spec/triggers/0/imageChangeParams/from/name', 'value': 'rhpam73-businesscentral-openshift-with-users:latest'}]"
 
   oc new-app java:8~https://github.com/jbossdemocentral/rhpam7-order-it-hw-demo-springboot-app \
               --name rhpam7-oih-order-app \

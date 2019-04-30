@@ -214,15 +214,15 @@ Function Create-Projects() {
 
 Function Import-ImageStreams-And-Templates() {
   Write-Output-Header "Importing Image Streams"
-  Call-Oc "create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/$OPENSHIFT_PAM7_TEMPLATES_TAG/rhpam72-image-streams.yaml" $True "Error importing Image Streams" $True
+  Call-Oc "create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/$OPENSHIFT_PAM7_TEMPLATES_TAG/rhpam73-image-streams.yaml" $True "Error importing Image Streams" $True
   Call-Oc "create -f https://raw.githubusercontent.com/jboss-openshift/application-templates/ose-v1.4.15/openjdk/openjdk18-image-stream.json" $True "Error importing Image Streams" $True
 
   Write-Output-Header "Patching the ImageStreams"
-  oc patch is/rhpam72-businesscentral-openshift --type='json' -p "[{'op': 'replace', 'path': '/spec/tags/0/from/name', 'value': 'registry.access.redhat.com/rhpam-7/rhpam72-businesscentral-openshift:1.0'}]"
-  oc patch is/rhpam72-kieserver-openshift --type='json' -p "[{'op': 'replace', 'path': '/spec/tags/0/from/name', 'value': 'registry.access.redhat.com/rhpam-7/rhpam72-kieserver-openshift:1.0'}]"
+  oc patch is/rhpam73-businesscentral-openshift --type='json' -p "[{'op': 'replace', 'path': '/spec/tags/0/from/name', 'value': 'registry.access.redhat.com/rhpam-7/rhpam73-businesscentral-openshift:1.0'}]"
+  oc patch is/rhpam73-kieserver-openshift --type='json' -p "[{'op': 'replace', 'path': '/spec/tags/0/from/name', 'value': 'registry.access.redhat.com/rhpam-7/rhpam73-kieserver-openshift:1.0'}]"
 
   Write-Output-Header "Importing Templates"
-  Call-Oc "create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/$OPENSHIFT_PAM7_TEMPLATES_TAG/templates/rhpam72-authoring.yaml" $True "Error importing Template" $True
+  Call-Oc "create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/$OPENSHIFT_PAM7_TEMPLATES_TAG/templates/rhpam73-authoring.yaml" $True "Error importing Template" $True
 }
 
 Function Import-Secrets-And-Service-Account() {
@@ -245,11 +245,11 @@ Function Create-Application() {
     $IMAGE_STREAM_NAMESPACE=$($PRJ[0])
   }
 
-  oc process -f $SCRIPT_DIR/rhpam72-businesscentral-openshift-with-users.yaml -p DOCKERFILE_REPOSITORY="https://github.com/jbossdemocentral/rhpam7-order-it-hw-demo" -p DOCKERFILE_REF="master" -p DOCKERFILE_CONTEXT="support/openshift/rhpam7-businesscentral-openshift-with-users" -n $($PRJ[0]) | oc create -n $($PRJ[0]) -f -
+  oc process -f $SCRIPT_DIR/rhpam73-businesscentral-openshift-with-users.yaml -p DOCKERFILE_REPOSITORY="https://github.com/jbossdemocentral/rhpam7-order-it-hw-demo" -p DOCKERFILE_REF="master" -p DOCKERFILE_CONTEXT="support/openshift/rhpam7-businesscentral-openshift-with-users" -n $($PRJ[0]) | oc create -n $($PRJ[0]) -f -
 
   oc create configmap setup-demo-scripts --from-file=$SCRIPT_DIR/bc-clone-git-repository.sh,$SCRIPT_DIR/provision-properties-static.sh
 
-  $argList = "new-app --template=rhpam72-authoring"`
+  $argList = "new-app --template=rhpam73-authoring"`
       + " -p APPLICATION_NAME=""$ARG_DEMO""" `
       + " -p IMAGE_STREAM_NAMESPACE=""$IMAGE_STREAM_NAMESPACE""" `
       + " -p IMAGE_STREAM_TAG=""1.0""" `
@@ -273,7 +273,7 @@ Function Create-Application() {
   oc set volume dc/$ARG_DEMO-rhpamcentr --add --name=config-volume --configmap-name=setup-demo-scripts  --mount-path=/tmp/config-files
   oc set deployment-hook dc/$ARG_DEMO-rhpamcentr --post -c $ARG_DEMO-rhpamcentr -e BC_URL="http://$ARG_DEMO-rhpamcent" -v config-volume --failure-policy=abort -- /bin/bash /tmp/config-files/bc-clone-git-repository.sh
 
-  oc patch dc/$ARG_DEMO-rhpamcentr --type='json' -p "[{'op': 'replace', 'path': '/spec/triggers/0/imageChangeParams/from/name', 'value': 'rhpam72-businesscentral-openshift-with-users:latest'}]"
+  oc patch dc/$ARG_DEMO-rhpamcentr --type='json' -p "[{'op': 'replace', 'path': '/spec/triggers/0/imageChangeParams/from/name', 'value': 'rhpam73-businesscentral-openshift-with-users:latest'}]"
 
   $argList = "new-app java:8~https://github.com/jbossdemocentral/rhpam7-order-it-hw-demo-springboot-app" `
               + " --name rhpam7-oih-order-app" `
