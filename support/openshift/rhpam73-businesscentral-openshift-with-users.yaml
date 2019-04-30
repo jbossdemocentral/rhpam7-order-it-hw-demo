@@ -34,6 +34,10 @@ objects:
         ref: ${DOCKERFILE_REF}
       type: Git
     strategy:
+      dockerStrategy:
+        from:
+          kind: ImageStreamTag
+          name: rhpam73-businesscentral-openshift:1.0
       type: Docker
     triggers:
     - type: ConfigChange
