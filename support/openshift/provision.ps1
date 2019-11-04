@@ -280,7 +280,7 @@ Function Create-Application() {
   $argList = "new-app --template=rhpam$PAM7_VERSION-authoring"`
       + " -p APPLICATION_NAME=""$ARG_DEMO""" `
       + " -p IMAGE_STREAM_NAMESPACE=""$IMAGE_STREAM_NAMESPACE""" `
-      + " -p IMAGE_STREAM_TAG=""1.0""" `
+      + " -p IMAGE_STREAM_TAG=""$IMAGE_STREAM_TAG""" `
       + " -p KIE_ADMIN_USER=""$KIE_ADMIN_USER""" `
       + " -p KIE_ADMIN_PWD=""$KIE_ADMIN_PWD""" `
       + " -p KIE_SERVER_CONTROLLER_USER=""$KIE_SERVER_CONTROLLER_USER""" `
