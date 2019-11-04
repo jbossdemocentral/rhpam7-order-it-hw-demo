@@ -214,7 +214,7 @@ Function Create-Projects() {
 
 Function Import-ImageStreams-And-Templates() {
   Write-Output-Header "Importing Image Streams"
-  Call-Oc "create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/$OPENSHIFT_PAM7_TEMPLATES_TAG/rhpam73-image-streams.yaml" $True "Error importing Image Streams" $True
+  Call-Oc "create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/$OPENSHIFT_PAM7_TEMPLATES_TAG/rhpam$PAM7_VERSION-image-streams.yaml" $True "Error importing Image Streams" $True
 
   Write-Output ""
   Write-Output "Fetching ImageStreams from registry."
@@ -222,15 +222,15 @@ Function Import-ImageStreams-And-Templates() {
   Start-Sleep -s 10
 
   #  Explicitly import the images. This is to overcome a problem where the image import gets a 500 error from registry.redhat.io when we deploy multiple containers at once.
-  Call-Oc "import-image rhpam73-businesscentral-openshift:$IMAGE_STREAM_TAG —confirm -n $($PRJ[0])" $True "Error fetching Image Streams."
-  Call-Oc "import-image rhpam73-kieserver-openshift:$IMAGE_STREAM_TAG —confirm -n $($PRJ[0])" $True "Error fetching Image Streams."
+  Call-Oc "import-image rhpam-businesscentral-rhel8:$IMAGE_STREAM_TAG —confirm -n $($PRJ[0])" $True "Error fetching Image Streams."
+  Call-Oc "import-image rhpam-kieserver-rhel8:$IMAGE_STREAM_TAG —confirm -n $($PRJ[0])" $True "Error fetching Image Streams."
 
   #Write-Output-Header "Patching the ImageStreams"
   #oc patch is/rhpam73-businesscentral-openshift --type='json' -p "[{'op': 'replace', 'path': '/spec/tags/0/from/name', 'value': 'registry.access.redhat.com/rhpam-7/rhpam73-businesscentral-openshift:1.0'}]"
   #oc patch is/rhpam73-kieserver-openshift --type='json' -p "[{'op': 'replace', 'path': '/spec/tags/0/from/name', 'value': 'registry.access.redhat.com/rhpam-7/rhpam73-kieserver-openshift:1.0'}]"
 
   Write-Output-Header "Importing Templates"
-  Call-Oc "create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/$OPENSHIFT_PAM7_TEMPLATES_TAG/templates/rhpam73-authoring.yaml" $True "Error importing Template" $True
+  Call-Oc "create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/$OPENSHIFT_PAM7_TEMPLATES_TAG/templates/rhpam$PAM7_VERSION-authoring.yaml" $True "Error importing Template" $True
 }
 
 Function Create-Rhn-Secret-For-Pull() {
@@ -273,14 +273,14 @@ Function Create-Application() {
     $IMAGE_STREAM_NAMESPACE=$($PRJ[0])
   }
 
-  oc process -f $SCRIPT_DIR/rhpam73-businesscentral-openshift-with-users.yaml -p DOCKERFILE_REPOSITORY="https://github.com/jbossdemocentral/rhpam7-order-it-hw-demo" -p DOCKERFILE_REF="master" -p DOCKERFILE_CONTEXT="support/openshift/rhpam7-businesscentral-openshift-with-users" -n $($PRJ[0]) | oc create -n $($PRJ[0]) -f -
+  oc process -f $SCRIPT_DIR/rhpam$PAM7_VERSION-businesscentral-openshift-with-users.yaml -p DOCKERFILE_REPOSITORY="https://github.com/jbossdemocentral/rhpam7-order-it-hw-demo" -p DOCKERFILE_REF="master" -p DOCKERFILE_CONTEXT="support/openshift/rhpam7-businesscentral-openshift-with-users" -n $($PRJ[0]) | oc create -n $($PRJ[0]) -f -
 
   oc create configmap setup-demo-scripts --from-file=$SCRIPT_DIR/bc-clone-git-repository.sh,$SCRIPT_DIR/provision-properties-static.sh
 
-  $argList = "new-app --template=rhpam73-authoring"`
+  $argList = "new-app --template=rhpam$PAM7_VERSION-authoring"`
       + " -p APPLICATION_NAME=""$ARG_DEMO""" `
       + " -p IMAGE_STREAM_NAMESPACE=""$IMAGE_STREAM_NAMESPACE""" `
-      + " -p IMAGE_STREAM_TAG=""1.0""" `
+      + " -p IMAGE_STREAM_TAG=""$IMAGE_STREAM_TAG""" `
       + " -p KIE_ADMIN_USER=""$KIE_ADMIN_USER""" `
       + " -p KIE_ADMIN_PWD=""$KIE_ADMIN_PWD""" `
       + " -p KIE_SERVER_CONTROLLER_USER=""$KIE_SERVER_CONTROLLER_USER""" `
@@ -295,13 +295,17 @@ Function Create-Application() {
 
   Call-Oc $argList $True "Error creating application." $True
 
+  # Disable the OpenShift Startup Strategy and revert to the old Controller Strategy
+  oc set env dc/$ARG_DEMO-rhpamcentr KIE_WORKBENCH_CONTROLLER_OPENSHIFT_ENABLED=false
+  oc set env dc/$ARG_DEMO-kieserver KIE_SERVER_STARTUP_STRATEGY=ControllerBasedStartupStrategy KIE_SERVER_CONTROLLER_USER=$KIE_SERVER_CONTROLLER_USER KIE_SERVER_CONTROLLER_PWD=$KIE_SERVER_CONTROLLER_PWD KIE_SERVER_CONTROLLER_SERVICE=$ARG_DEMO-rhpamcentr KIE_SERVER_CONTROLLER_PROTOCOL=ws KIE_SERVER_ROUTE_NAME=insecure-$ARG_DEMO-kieserver
+
   # Give the system some time to create the DC, etc. before we trigger a deployment config change.
   Start-Sleep -s 5
 
   oc set volume dc/$ARG_DEMO-rhpamcentr --add --name=config-volume --configmap-name=setup-demo-scripts  --mount-path=/tmp/config-files
   oc set deployment-hook dc/$ARG_DEMO-rhpamcentr --post -c $ARG_DEMO-rhpamcentr -e BC_URL="http://$ARG_DEMO-rhpamcentr:8080" -v config-volume --failure-policy=abort -- /bin/bash /tmp/config-files/bc-clone-git-repository.sh
 
-  oc patch dc/$ARG_DEMO-rhpamcentr --type='json' -p "[{'op': 'replace', 'path': '/spec/triggers/0/imageChangeParams/from/name', 'value': 'rhpam73-businesscentral-openshift-with-users:latest'}]"
+  oc patch dc/$ARG_DEMO-rhpamcentr --type='json' -p "[{'op': 'replace', 'path': '/spec/triggers/0/imageChangeParams/from/name', 'value': 'rhpam$PAM7_VERSION-businesscentral-openshift-with-users:latest'}]"
 
   $argList = "new-app java:8~https://github.com/jbossdemocentral/rhpam7-order-it-hw-demo-springboot-app" `
               + " --name rhpam7-oih-order-app" `
