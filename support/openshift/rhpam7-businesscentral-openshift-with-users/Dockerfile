@@ -1,4 +1,4 @@
-FROM registry.redhat.io/rhpam-7/rhpam-businesscentral-rhel8:7.7.0
+FROM registry.redhat.io/rhpam-7/rhpam-businesscentral-rhel8:7.11.0
 
 ADD ./contrib/application-users.properties /opt/eap/standalone/configuration/application-users.properties
 ADD ./contrib/application-roles.properties /opt/eap/standalone/configuration/application-roles.properties
