@@ -26,7 +26,7 @@ kieserver.optaplanner.enabled=false
 #data source configuration
 spring.datasource.username=sa
 spring.datasource.password=sa
-spring.datasource.url=jdbc:h2:/data/order-it-app;MVCC=true
+spring.datasource.url=jdbc:h2:/data/order-it-app
 spring.datasource.driver-class-name=org.h2.Driver
 
 #hibernate configuration
