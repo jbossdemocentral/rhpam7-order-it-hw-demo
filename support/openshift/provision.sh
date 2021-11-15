@@ -350,8 +350,11 @@ function create_application() {
   -p IMAGE_STREAM_TAG="$IMAGE_STREAM_TAG" \
   -p KIE_SERVER_CONTROLLER_OPENSHIFT_GLOBAL_DISCOVERY_ENABLED="true" \
   -p BUSINESS_CENTRAL_MEMORY_LIMIT="6Gi" \
+  -p BUSINESS_CENTRAL_CPU_LIMIT="4" \
   -p BUSINESS_CENTRAL_HTTPS_SECRET='businesscentral-app-secret' \
   -p KIE_SERVER_HTTPS_SECRET='kieserver-app-secret' \
+  -p MAVEN_REPO_USERNAME=$KIE_ADMIN_USER \
+  -p MAVEN_REPO_PASSWORD=$KIE_ADMIN_PWD \
   -p CREDENTIALS_SECRET='rhpam-credentials'
 
 
@@ -372,7 +375,7 @@ function create_application() {
               -e JAVA_OPTIONS="-Dorg.kie.server.repo=/data -Dorg.jbpm.document.storage=/data/docs -Dorder.service.location=http://rhpam7-oih-order-mgmt-app:8080 -Dorg.kie.server.controller.user=$KIE_ADMIN_USER -Dorg.kie.server.controller.pwd=$KIE_ADMIN_PWD -Dspring.profiles.active=openshift-rhpam" \
               -e KIE_MAVEN_REPO_USER=$KIE_ADMIN_USER \
               -e KIE_MAVEN_REPO_PASSWORD=$KIE_ADMIN_PWD \
-              -e RHPAMCENTR_MAVEN_REPO_SERVICE=http://$ARG_DEMO-rhpamcentr:8080/maven2/ \
+              -e KIE_MAVEN_REPO=http://$ARG_DEMO-rhpamcentr:8080/maven2/ \
               -e GC_MAX_METASPACE_SIZE=192
 
   oc create configmap rhpam7-oih-order-app-settings-config-map --from-file=$SCRIPT_DIR/settings.xml -n ${PRJ[0]}
