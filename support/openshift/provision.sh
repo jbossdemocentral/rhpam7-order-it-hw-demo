@@ -369,10 +369,10 @@ function create_application() {
 
   oc new-app java:11~https://github.com/jbossdemocentral/rhpam7-order-it-hw-demo-springboot-app#pam711-upgrade \
               --name rhpam7-oih-order-app \
-              -e JAVA_OPTIONS="-Dorg.kie.server.repo=/data -Dorg.jbpm.document.storage=/data/docs -Dorder.service.location=http://rhpam7-oih-order-mgmt-app:8080 -Dorg.kie.server.controller.user=controllerUser -Dorg.kie.server.controller.pwd=test1234! -Dspring.profiles.active=openshift-rhpam" \
-              -e KIE_MAVEN_REPO_USER=mavenUser \
-              -e KIE_MAVEN_REPO_PASSWORD=test1234! \
-              -e KIE_MAVEN_REPO=http://$ARG_DEMO-rhpamcentr:8080/maven2 \
+              -e JAVA_OPTIONS="-Dorg.kie.server.repo=/data -Dorg.jbpm.document.storage=/data/docs -Dorder.service.location=http://rhpam7-oih-order-mgmt-app:8080 -Dorg.kie.server.controller.user=$KIE_ADMIN_USER -Dorg.kie.server.controller.pwd=$KIE_ADMIN_PWD -Dspring.profiles.active=openshift-rhpam" \
+              -e KIE_MAVEN_REPO_USER=$KIE_ADMIN_USER \
+              -e KIE_MAVEN_REPO_PASSWORD=$KIE_ADMIN_PWD \
+              -e RHPAMCENTR_MAVEN_REPO_SERVICE=http://$ARG_DEMO-rhpamcentr:8080/maven2/ \
               -e GC_MAX_METASPACE_SIZE=192
 
   oc create configmap rhpam7-oih-order-app-settings-config-map --from-file=$SCRIPT_DIR/settings.xml -n ${PRJ[0]}
